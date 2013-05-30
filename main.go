@@ -29,7 +29,7 @@ type PusherPayload struct {
     Final   bool   `json:"final"`
 }
 
-var Conn *sql.DB
+var DB *sql.DB
 var JobIdFind *sql.Stmt
 var LogPartsInsert *sql.Stmt
 var AMQP *amqp.Connection
@@ -42,7 +42,7 @@ func main() {
     setupDatabase()
     defer closeDatabase()
 
-    PusherClient = pusher.NewClient("5028", "61c3b5fb2fe3f7833030", "dd3f5586214154941a04", false)
+    setupPusher()
 
     logParts, _ := subscribeToLogs()
 
@@ -55,6 +55,25 @@ func main() {
         }(logParts)
     }
     wg.Wait()
+}
+
+func setupPusher() {
+    key := os.Getenv("PUSHER_KEY")
+    if key == "" {
+        log.Fatalf("PUSHER_KEY was empty")
+    }
+
+    secret := os.Getenv("PUSHER_SECRET")
+    if secret == "" {
+        log.Fatalf("PUSHER_SECRET was empty")
+    }
+
+    appId := os.Getenv("PUSHER_APP_ID")
+    if appId == "" {
+        log.Fatalf("PUSHER_APP_ID was empty")
+    }
+
+    PusherClient = pusher.NewClient(appId, key, secret, false)
 }
 
 func processLogParts(logParts <-chan amqp.Delivery) {
@@ -124,30 +143,28 @@ func setupDatabase() {
         log.Fatalf("[database:parse] %s", err)
     }
 
-    db, err := sql.Open("postgres", pgUrl)
+    DB, err = sql.Open("postgres", pgUrl)
     if err != nil {
         log.Fatalf("[database:open] %s", err)
     }
 
-    if err = db.Ping(); err != nil {
+    if err = DB.Ping(); err != nil {
         log.Fatalf("[database:ping] %s", err)
     }
 
-    JobIdFind, err = db.Prepare("SELECT id FROM logs WHERE job_id=$1")
-    if err = db.Ping(); err != nil {
+    JobIdFind, err = DB.Prepare("SELECT id FROM logs WHERE job_id=$1")
+    if err != nil {
         log.Fatalf("[database:prepare:jobidfind] %s", err)
     }
 
-    LogPartsInsert, err = db.Prepare("INSERT INTO log_parts (log_id, number, content, final, created_at) VALUES ($1, $2, $3, $4, $5) RETURNING id")
-    if err = db.Ping(); err != nil {
+    LogPartsInsert, err = DB.Prepare("INSERT INTO log_parts (log_id, number, content, final, created_at) VALUES ($1, $2, $3, $4, $5) RETURNING id")
+    if err != nil {
         log.Fatalf("[database:prepare:logpartsinsert] %s", err)
     }
-
-    Conn = db
 }
 
 func closeDatabase() {
-    Conn.Close()
+    DB.Close()
 }
 
 func setupAMQP() {

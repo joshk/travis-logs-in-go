@@ -10,6 +10,7 @@ import (
     "log"
     "os"
     //"strings"
+    "sync"
     "time"
 )
 
@@ -32,6 +33,7 @@ var Conn *sql.DB
 var JobIdFind *sql.Stmt
 var LogPartsInsert *sql.Stmt
 var AMQP *amqp.Connection
+var PusherClient *pusher.Client
 
 func main() {
     setupAMQP()
@@ -40,17 +42,29 @@ func main() {
     setupDatabase()
     defer closeDatabase()
 
+    PusherClient = pusher.NewClient("5028", "61c3b5fb2fe3f7833030", "dd3f5586214154941a04", false)
+
     logParts, _ := subscribeToLogs()
 
-    pusherClient := pusher.NewClient("5028", "61c3b5fb2fe3f7833030", "dd3f5586214154941a04", false)
+    var wg sync.WaitGroup
+    for i := 0; i < 10; i++ {
+        wg.Add(1)
+        go func(logParts <-chan amqp.Delivery) {
+            processLogParts(logParts)
+            defer wg.Done()
+        }(logParts)
+    }
+    wg.Wait()
+}
 
+func processLogParts(logParts <-chan amqp.Delivery) {
     for part := range logParts {
-        fmt.Printf("\n\n%#v\n", string(part.Body))
+        //fmt.Printf("\n\n%#v\n", string(part.Body))
         var payload Payload
         json.Unmarshal(part.Body, &payload)
         //payload.Content = strings.Replace(payload.Content, "\x00", "", -1)
         fmt.Printf("job_id:%d number:%d\n", payload.JobId, payload.Number)
-        fmt.Printf("%#v\n", payload.Content)
+        //fmt.Printf("%#v\n", payload.Content)
 
         var logId string
         err := JobIdFind.QueryRow(payload.JobId).Scan(&logId)
@@ -73,25 +87,28 @@ func main() {
         }
 
         // log.Println("Log Part created with id:", logPartId)
-
-        pusherPayload := PusherPayload{
-            JobId:   payload.JobId,
-            Number:  payload.Number,
-            Content: payload.Content,
-            Final:   payload.Final,
-        }
-
-        readyToPush, err := json.Marshal(pusherPayload)
-        if err != nil {
-            log.Fatalf("json.marshal: %v", err)
-        }
-
-        err = pusherClient.Publish(string(readyToPush), "job:log", fmt.Sprintf("job-%d", payload.JobId))
-        if err != nil {
-            log.Fatalf("pusherclient.publish: %v", err)
-        }
+        liveStream(payload)
 
         part.Ack(false)
+    }
+}
+
+func liveStream(payload Payload) {
+    pusherPayload := PusherPayload{
+        JobId:   payload.JobId,
+        Number:  payload.Number,
+        Content: payload.Content,
+        Final:   payload.Final,
+    }
+
+    readyToPush, err := json.Marshal(pusherPayload)
+    if err != nil {
+        log.Fatalf("json.marshal: %v", err)
+    }
+
+    err = PusherClient.Publish(string(readyToPush), "job:log", fmt.Sprintf("job-%d", payload.JobId))
+    if err != nil {
+        log.Fatalf("pusherclient.publish: %v", err)
     }
 }
 
@@ -135,7 +152,7 @@ func closeDatabase() {
 
 func setupAMQP() {
     var err error
-    
+
     url := os.Getenv("AMQP_URL")
     if url == "" {
         log.Fatal("We Haz No AMQP Deets")
@@ -174,6 +191,11 @@ func subscribeToLogs() (<-chan amqp.Delivery, *amqp.Channel) {
     ch, err := AMQP.Channel()
     if err != nil {
         log.Fatalf("channel.open: %s", err)
+    }
+
+    err = ch.Qos(10, 0, false)
+    if err != nil {
+        log.Fatalf("channel.qos: %s", err)
     }
 
     logParts, err := ch.Consume("reporting.jobs.logs", "processor", false, false, false, false, nil)

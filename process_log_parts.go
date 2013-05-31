@@ -51,11 +51,7 @@ func ProcessLogParts() {
 func processLogParts(logParts <-chan amqp.Delivery) {
     for part := range logParts {
         //fmt.Printf("\n\n%#v\n", string(part.Body))
-        var payload Payload
-        json.Unmarshal(part.Body, &payload)
-        //payload.Content = strings.Replace(payload.Content, "\x00", "", -1)
-        fmt.Printf("job_id:%d number:%d\n", payload.JobId, payload.Number)
-        //fmt.Printf("%#v\n", payload.Content)
+        payload := parseMessageBody(part)
 
         logId := findLogId(payload)
 
@@ -65,6 +61,17 @@ func processLogParts(logParts <-chan amqp.Delivery) {
 
         part.Ack(false)
     }
+}
+
+func parseMessageBody(message amqp.Delivery) Payload {
+    var payload Payload
+    json.Unmarshal(message.Body, &payload)
+    
+    //payload.Content = strings.Replace(payload.Content, "\x00", "", -1)
+    fmt.Printf("job_id:%d number:%d\n", payload.JobId, payload.Number)
+    //fmt.Printf("%#v\n", payload.Content)
+    
+    return payload
 }
 
 func findLogId(payload Payload) string {

@@ -68,7 +68,7 @@ func parseMessageBody(message amqp.Delivery) *Payload {
     json.Unmarshal(message.Body, &payload)
     
     //payload.Content = strings.Replace(payload.Content, "\x00", "", -1)
-    fmt.Printf("job_id:%d number:%d\n", payload.JobId, payload.Number)
+    //fmt.Printf("job_id:%d number:%d\n", payload.JobId, payload.Number)
     //fmt.Printf("%#v\n", payload.Content)
     
     return payload

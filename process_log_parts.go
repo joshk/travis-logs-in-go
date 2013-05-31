@@ -63,8 +63,8 @@ func processLogParts(logParts <-chan amqp.Delivery) {
     }
 }
 
-func parseMessageBody(message amqp.Delivery) Payload {
-    var payload Payload
+func parseMessageBody(message amqp.Delivery) *Payload {
+    var payload *Payload
     json.Unmarshal(message.Body, &payload)
     
     //payload.Content = strings.Replace(payload.Content, "\x00", "", -1)
@@ -74,7 +74,7 @@ func parseMessageBody(message amqp.Delivery) Payload {
     return payload
 }
 
-func findLogId(payload Payload) string {
+func findLogId(payload *Payload) string {
     var logId string
     err := JobIdFind.QueryRow(payload.JobId).Scan(&logId)
 
@@ -88,7 +88,7 @@ func findLogId(payload Payload) string {
     return logId
 }
 
-func createLogPart(logId string, payload Payload) {
+func createLogPart(logId string, payload *Payload) {
     var logPartId string
     err := LogPartsInsert.QueryRow(logId, payload.Number, payload.Content, payload.Final, time.Now()).Scan(&logPartId)
 
@@ -102,7 +102,7 @@ func createLogPart(logId string, payload Payload) {
     // log.Println("Log Part created with id:", logPartId)
 }
 
-func streamToPusher(payload Payload) {
+func streamToPusher(payload *Payload) {
     pusherPayload := PusherPayload{
         JobId:   payload.JobId,
         Number:  payload.Number,

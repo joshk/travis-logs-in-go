@@ -57,34 +57,45 @@ func processLogParts(logParts <-chan amqp.Delivery) {
         fmt.Printf("job_id:%d number:%d\n", payload.JobId, payload.Number)
         //fmt.Printf("%#v\n", payload.Content)
 
-        var logId string
-        err := JobIdFind.QueryRow(payload.JobId).Scan(&logId)
+        logId := findLogId(payload)
 
-        switch {
-        case err == sql.ErrNoRows:
-            log.Fatalf("No log with job_id:%s", payload.JobId)
-        case err != nil:
-            log.Fatalf("db.queryrow: %v", err)
-        }
+        createLogPart(logId, payload)
 
-        var logPartId string
-        err = LogPartsInsert.QueryRow(logId, payload.Number, payload.Content, payload.Final, time.Now()).Scan(&logPartId)
-
-        switch {
-        case err == sql.ErrNoRows:
-            log.Fatalf("No new log part created")
-        case err != nil:
-            log.Fatalf("db.queryrow: %v", err)
-        }
-
-        // log.Println("Log Part created with id:", logPartId)
-        liveStream(payload)
+        streamToPusher(payload)
 
         part.Ack(false)
     }
 }
 
-func liveStream(payload Payload) {
+func findLogId(payload Payload) string {
+    var logId string
+    err := JobIdFind.QueryRow(payload.JobId).Scan(&logId)
+
+    switch {
+    case err == sql.ErrNoRows:
+        log.Fatalf("No log with job_id:%s", payload.JobId)
+    case err != nil:
+        log.Fatalf("db.queryrow: %v", err)
+    }
+    
+    return logId
+}
+
+func createLogPart(logId string, payload Payload) {
+    var logPartId string
+    err := LogPartsInsert.QueryRow(logId, payload.Number, payload.Content, payload.Final, time.Now()).Scan(&logPartId)
+
+    switch {
+    case err == sql.ErrNoRows:
+        log.Fatalf("No new log part created")
+    case err != nil:
+        log.Fatalf("db.queryrow: %v", err)
+    }
+    
+    // log.Println("Log Part created with id:", logPartId)
+}
+
+func streamToPusher(payload Payload) {
     pusherPayload := PusherPayload{
         JobId:   payload.JobId,
         Number:  payload.Number,

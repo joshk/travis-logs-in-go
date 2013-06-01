@@ -71,7 +71,7 @@ func setupMetrics() {
     MetricsPusherFailedCount = metrics.NewMeter()
     Metrics.Register("logs.process_log_part.pusher.failed", MetricsPusherFailedCount)
 
-    metricsLogging(60)
+    go metricsLogging(60)
 }
 
 func processLogParts(logParts <-chan amqp.Delivery) {

@@ -21,9 +21,9 @@ var Metrics *metrics.StandardRegistry
 
 func metricsLogging(interval int) {
     l := log.New(os.Stdout, "metrics: ", 0)
-    now := time.Now().Unix()
 
     for {
+        now := time.Now().Unix()
         Metrics.Each(func(name string, i interface{}) {
             switch m := i.(type) {
             case metrics.Counter:

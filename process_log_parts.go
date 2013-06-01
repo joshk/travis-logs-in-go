@@ -4,6 +4,7 @@ import (
     "database/sql"
     "encoding/json"
     "fmt"
+    "github.com/rcrowley/go-metrics"
     "github.com/streadway/amqp"
     "log"
     //"strings"
@@ -26,6 +27,11 @@ type PusherPayload struct {
     Final   bool   `json:"final"`
 }
 
+var MetricsProcessTimer *metrics.StandardTimer
+var MetricsProcessFailedCount *metrics.StandardMeter
+var MetricsPusherTimer *metrics.StandardTimer
+var MetricsPusherFailedCount *metrics.StandardMeter
+
 func ProcessLogParts() {
     setupAMQP()
     defer closeAMQP()
@@ -34,6 +40,8 @@ func ProcessLogParts() {
     defer closeDatabase()
 
     setupPusher()
+
+    setupMetrics()
 
     logParts, _ := subscribeToQueue("reporting.jobs.logs")
 
@@ -48,29 +56,51 @@ func ProcessLogParts() {
     wg.Wait()
 }
 
+func setupMetrics() {
+    Metrics = metrics.NewRegistry()
+
+    MetricsProcessTimer = metrics.NewTimer()
+    Metrics.Register("logs.process_log_part", MetricsProcessTimer)
+
+    MetricsProcessFailedCount = metrics.NewMeter()
+    Metrics.Register("logs.process_log_part.failed", MetricsProcessFailedCount)
+
+    MetricsPusherTimer = metrics.NewTimer()
+    Metrics.Register("logs.process_log_part.pusher", MetricsPusherTimer)
+
+    MetricsPusherFailedCount = metrics.NewMeter()
+    Metrics.Register("logs.process_log_part.pusher.failed", MetricsPusherFailedCount)
+
+    metricsLogging(60)
+}
+
 func processLogParts(logParts <-chan amqp.Delivery) {
     for part := range logParts {
-        //fmt.Printf("\n\n%#v\n", string(part.Body))
-        payload := parseMessageBody(part)
-
-        logId := findLogId(payload)
-
-        createLogPart(logId, payload)
-
-        streamToPusher(payload)
-
-        part.Ack(false)
+        MetricsProcessTimer.Time(func() { processLogPart(part) })
     }
+}
+
+func processLogPart(part amqp.Delivery) {
+    //fmt.Printf("\n\n%#v\n", string(part.Body))
+    payload := parseMessageBody(part)
+
+    logId := findLogId(payload)
+
+    createLogPart(logId, payload)
+
+    streamToPusher(payload)
+
+    part.Ack(false)
 }
 
 func parseMessageBody(message amqp.Delivery) *Payload {
     var payload *Payload
     json.Unmarshal(message.Body, &payload)
-    
+
     //payload.Content = strings.Replace(payload.Content, "\x00", "", -1)
     //fmt.Printf("job_id:%d number:%d\n", payload.JobId, payload.Number)
     //fmt.Printf("%#v\n", payload.Content)
-    
+
     return payload
 }
 
@@ -84,7 +114,7 @@ func findLogId(payload *Payload) string {
     case err != nil:
         log.Fatalf("db.queryrow: %v", err)
     }
-    
+
     return logId
 }
 
@@ -98,11 +128,13 @@ func createLogPart(logId string, payload *Payload) {
     case err != nil:
         log.Fatalf("db.queryrow: %v", err)
     }
-    
+
     // log.Println("Log Part created with id:", logPartId)
 }
 
 func streamToPusher(payload *Payload) {
+    var err error
+
     pusherPayload := PusherPayload{
         JobId:   payload.JobId,
         Number:  payload.Number,
@@ -115,8 +147,11 @@ func streamToPusher(payload *Payload) {
         log.Fatalf("json.marshal: %v", err)
     }
 
-    err = PusherClient.Publish(string(readyToPush), "job:log", fmt.Sprintf("job-%d", payload.JobId))
+    MetricsPusherTimer.Time(func() {
+        err = PusherClient.Publish(string(readyToPush), "job:log", fmt.Sprintf("job-%d", payload.JobId))
+    })
     if err != nil {
+        MetricsPusherFailedCount.Mark(1)
         log.Fatalf("pusherclient.publish: %v", err)
     }
 }

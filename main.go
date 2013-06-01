@@ -2,8 +2,8 @@ package main
 
 import (
     //"strings"
-    "log"
     "flag"
+    "log"
 )
 
 var process = flag.String("process", "streaming", "The process to start")
@@ -16,8 +16,8 @@ func main() {
         ProcessLogParts()
     case "aggregate":
         log.Println("Starting Log Aggregation")
-        log.Println("WE NEED AGGREGATION")
-    default: 
+        AggregateLogParts()
+    default:
         panic("Invalid process option selected")
     }
 }

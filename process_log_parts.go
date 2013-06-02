@@ -76,63 +76,89 @@ func setupMetrics() {
 
 func processLogParts(logParts <-chan amqp.Delivery) {
     for part := range logParts {
-        MetricsProcessTimer.Time(func() { processLogPart(part) })
+        var err error
+        MetricsProcessTimer.Time(func() {
+            err = processLogPart(part)
+        })
+        if err != nil {
+            log.Printf("ERROR %v\n", err)
+            MetricsProcessFailedCount.Mark(1)
+        }
     }
 }
 
-func processLogPart(part amqp.Delivery) {
+func processLogPart(part amqp.Delivery) error {
+    var err error
     //fmt.Printf("\n\n%#v\n", string(part.Body))
-    payload := parseMessageBody(part)
+    payload, err := parseMessageBody(part)
+    if err != nil {
+        return err
+    }
 
-    logId := findLogId(payload)
+    logId, err := findLogId(payload)
+    if err != nil {
+        return err
+    }
 
-    createLogPart(logId, payload)
+    err = createLogPart(logId, payload)
+    if err != nil {
+        return err
+    }
 
-    streamToPusher(payload)
+    err = streamToPusher(payload)
+    if err != nil {
+        return err
+    }
 
     part.Ack(false)
+
+    return nil
 }
 
-func parseMessageBody(message amqp.Delivery) *Payload {
+func parseMessageBody(message amqp.Delivery) (*Payload, error) {
     var payload *Payload
-    json.Unmarshal(message.Body, &payload)
+    err := json.Unmarshal(message.Body, &payload)
+
+    if err != nil {
+        return nil, fmt.Errorf("[parsemessagebody] error during json.unmarshal: %v", err)
+    }
 
     //payload.Content = strings.Replace(payload.Content, "\x00", "", -1)
     //fmt.Printf("job_id:%d number:%d\n", payload.JobId, payload.Number)
     //fmt.Printf("%#v\n", payload.Content)
 
-    return payload
+    return payload, nil
 }
 
-func findLogId(payload *Payload) string {
+func findLogId(payload *Payload) (string, error) {
     var logId string
     err := JobIdFind.QueryRow(payload.JobId).Scan(&logId)
 
     switch {
     case err == sql.ErrNoRows:
-        log.Fatalf("No log with job_id:%s", payload.JobId)
+        return "", fmt.Errorf("[findlogid] No log with job_id:%s found", payload.JobId)
     case err != nil:
-        log.Fatalf("db.queryrow: %v", err)
+        return "", fmt.Errorf("[findlogid] db query failed: %v", err)
     }
 
-    return logId
+    return logId, nil
 }
 
-func createLogPart(logId string, payload *Payload) {
+func createLogPart(logId string, payload *Payload) error {
     var logPartId string
     err := LogPartsInsert.QueryRow(logId, payload.Number, payload.Content, payload.Final, time.Now()).Scan(&logPartId)
 
     switch {
     case err == sql.ErrNoRows:
-        log.Fatalf("No new log part created")
+        return fmt.Errorf("[createlogpart] log part number:%s for job_id:%s could not be created. (%v)", payload.Number, payload.JobId, err)
     case err != nil:
-        log.Fatalf("db.queryrow: %v", err)
+        return fmt.Errorf("[createlogpart] db query failed: %v", err)
     }
 
-    // log.Println("Log Part created with id:", logPartId)
+    return nil
 }
 
-func streamToPusher(payload *Payload) {
+func streamToPusher(payload *Payload) error {
     var err error
 
     pusherPayload := PusherPayload{
@@ -144,7 +170,7 @@ func streamToPusher(payload *Payload) {
 
     readyToPush, err := json.Marshal(pusherPayload)
     if err != nil {
-        log.Fatalf("json.marshal: %v", err)
+        return fmt.Errorf("[streamtopusher] error during json.marshal: %v", err)
     }
 
     MetricsPusherTimer.Time(func() {
@@ -152,6 +178,8 @@ func streamToPusher(payload *Payload) {
     })
     if err != nil {
         MetricsPusherFailedCount.Mark(1)
-        log.Fatalf("pusherclient.publish: %v", err)
+        return fmt.Errorf("[streamtopusher] error during publishing to pusher: %v", err)
     }
+
+    return nil
 }

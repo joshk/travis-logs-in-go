@@ -13,7 +13,7 @@ func main() {
     switch *process {
     case "streaming":
         log.Println("Starting Log Stream Processing")
-        ProcessLogParts()
+        startLogPartsProcessing()
     case "aggregate":
         panic("aggregate not supported yet")
     default:

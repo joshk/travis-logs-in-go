@@ -15,8 +15,7 @@ func main() {
         log.Println("Starting Log Stream Processing")
         ProcessLogParts()
     case "aggregate":
-        log.Println("Starting Log Aggregation")
-        AggregateLogParts()
+        panic("aggregate not supported yet")
     default:
         panic("Invalid process option selected")
     }

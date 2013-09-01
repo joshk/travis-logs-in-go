@@ -4,7 +4,6 @@ import (
     "database/sql"
     "fmt"
     "github.com/bmizerany/pq"
-    "log"
     "time"
 )
 
@@ -47,8 +46,6 @@ func (db *DB) Close() {
 }
 
 func NewDB(url string) (*DB, error) {
-    log.Println("Setting up the Database")
-
     pgUrl, err := pq.ParseURL(url)
     if err != nil {
         return nil, err

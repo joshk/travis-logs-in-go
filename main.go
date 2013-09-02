@@ -1,9 +1,7 @@
 package main
 
 import (
-    //"strings"
     "flag"
-    "log"
 )
 
 var process = flag.String("process", "streaming", "The process to start")

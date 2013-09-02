@@ -7,14 +7,16 @@ This is a Golang based version of http://github.com/travis-ci/travis-logs.
 TODO
 ----
 
-- Sentry Errors
-
-- 3 second timeouts for message processing
+- interface the crap out of database and pusher and message broker
 
 - TESTS!
 
+- Handle AMQP connection issues?
+
+- Sentry Errors
+
 - Sanitize the log output (remove null chars etc.)
 
-- Handle AMQP connection issues
+- 3 second timeouts for message processing
 
 - Add a channel to talk to the logging go routines for things like shutdown

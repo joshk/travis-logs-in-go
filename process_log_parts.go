@@ -24,7 +24,7 @@ func startLogPartsProcessing() {
     }
 
     metrics := NewMetrics()
-    startMetricsLogging(metrics)
+    startMetricsLogging(metrics, logger)
 
     var wg sync.WaitGroup
     wg.Add(20)

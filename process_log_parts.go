@@ -12,6 +12,8 @@ var logger = log.New(os.Stderr, "", 0)
 func startLogPartsProcessing() {
     var err error
 
+    log.Println("Starting Log Stream Processing")
+
     amqp, logParts := subscribeToLoggingQueue()
     defer amqp.Close()
 

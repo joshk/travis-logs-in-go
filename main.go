@@ -12,7 +12,6 @@ func main() {
     flag.Parse()
     switch *process {
     case "streaming":
-        log.Println("Starting Log Stream Processing")
         startLogPartsProcessing()
     case "aggregate":
         panic("aggregate not supported yet")

@@ -49,12 +49,10 @@ func NewMetrics() *Metrics {
     return &Metrics{registry, processTimer, processFailedCount, pusherTimer, pusherFailedCount}
 }
 
-func startMetricsLogging(metrics *Metrics) {
-    l := log.New(os.Stdout, "metrics: ", 0)
-
+func startMetricsLogging(metrics *Metrics, logger *log.Logger) {
     go func() {
         for {
-            logMetrics(metrics, l)
+            logMetrics(metrics, logger)
             time.Sleep(time.Duration(int64(1e9) * int64(60)))
         }
     }()

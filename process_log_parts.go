@@ -79,10 +79,6 @@ func testDatabaseConnection() error {
     }
     defer db.Close()
 
-    if err = db.conn.Ping(); err != nil {
-        return err
-    }
-
     return nil
 }
 

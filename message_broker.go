@@ -17,7 +17,6 @@ func NewMessageBroker(url string) (*MessageBroker, error) {
         log.Fatal("We Haz No AMQP Deets")
     }
 
-    log.Println("Connecting to AMQP")
     conn, err := amqp.Dial(url)
     if err != nil {
         return nil, err
@@ -48,8 +47,6 @@ func (mb *MessageBroker) Close() {
 }
 
 func (mb *MessageBroker) Subscribe(queueName string) (<-chan amqp.Delivery, error) {
-    log.Printf("Subscribing to %s", queueName)
-
     ch, err := mb.conn.Channel()
     if err != nil {
         return nil, err

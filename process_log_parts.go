@@ -32,7 +32,7 @@ func startLogPartsProcessing() {
         go func(logProcessorNum int) {
             defer wg.Done()
 
-            log.Printf("Starting Log Processor %d", logProcessorNum+1)
+            logger.Printf("Starting Log Processor %d", logProcessorNum+1)
 
             db, err := NewDB(os.Getenv("DATABASE_URL"))
             if err != nil {
@@ -93,10 +93,14 @@ func newPusherClient() (*Pusher, error) {
 }
 
 func subscribeToLoggingQueue() (*MessageBroker, <-chan amqp.Delivery) {
+    logger.Println("Connecting to AMQP")
+
     amqp, err := NewMessageBroker(os.Getenv("RABBITMQ_URL"))
     if err != nil {
         logger.Fatalf("startLogPartsProcessing: fatal error connecting to %s - %v\n", os.Getenv("RABBITMQ_URL"), err)
     }
+
+    logger.Printf("Subscribing to reporting.jobs.logs")
 
     logParts, err := amqp.Subscribe("reporting.jobs.logs")
     if err != nil {

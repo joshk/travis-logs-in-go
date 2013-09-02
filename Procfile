@@ -1,1 +1,1 @@
-process: ./travis-logs-in-go
+process: travis-logs-in-go

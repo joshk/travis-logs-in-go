@@ -36,7 +36,7 @@ func startLogPartsProcessing() {
 
             logger.Printf("Starting Log Processor %d", logProcessorNum+1)
 
-            db, err := NewDB(os.Getenv("DATABASE_URL"))
+            db, err := NewRealDB(os.Getenv("DATABASE_URL"))
             if err != nil {
                 logger.Printf("startLogPartsProcessing: [%d] fatal error connecting to the database - %v\n", logProcessorNum+1, err)
                 return
@@ -77,7 +77,7 @@ func processLogParts(lpp *LogPartsProcessor, logParts <-chan amqp.Delivery) {
 
 func testDatabaseConnection() error {
     logger.Println("Checking the database connection details")
-    db, err := NewDB(os.Getenv("DATABASE_URL"))
+    db, err := NewRealDB(os.Getenv("DATABASE_URL"))
     if err != nil {
         return err
     }
@@ -86,7 +86,7 @@ func testDatabaseConnection() error {
     return nil
 }
 
-func newPusherClient() (*Pusher, error) {
+func newPusherClient() (Pusher, error) {
     p, err := NewPusher(os.Getenv("PUSHER_KEY"), os.Getenv("PUSHER_SECRET"), os.Getenv("PUSHER_APP_ID"))
     if err != nil {
         return nil, err
@@ -94,7 +94,7 @@ func newPusherClient() (*Pusher, error) {
     return p, nil
 }
 
-func subscribeToLoggingQueue() (*MessageBroker, <-chan amqp.Delivery) {
+func subscribeToLoggingQueue() (MessageBroker, <-chan amqp.Delivery) {
     logger.Println("Connecting to AMQP")
 
     amqp, err := NewMessageBroker(os.Getenv("RABBITMQ_URL"))

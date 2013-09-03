@@ -7,13 +7,22 @@ import (
     "time"
 )
 
-type DB struct {
+type DB interface {
+    FindLogId(int) (int, error)
+    CreateLogPart(int, int, string, bool) error
+    Close()
+}
+
+type RealDB struct {
     conn          *sql.DB
     jobIdFind     *sql.Stmt
     logPartCreate *sql.Stmt
 }
 
-func (db *DB) FindLogId(jobId int) (int, error) {
+// Force the compiler to check that RealDB implements DB.
+var _ DB = &RealDB{}
+
+func (db *RealDB) FindLogId(jobId int) (int, error) {
     var logId int
     err := db.jobIdFind.QueryRow(jobId).Scan(&logId)
 
@@ -27,7 +36,7 @@ func (db *DB) FindLogId(jobId int) (int, error) {
     return logId, nil
 }
 
-func (db *DB) CreateLogPart(logId int, number int, content string, final bool) error {
+func (db *RealDB) CreateLogPart(logId int, number int, content string, final bool) error {
     var logPartId int
     err := db.logPartCreate.QueryRow(logId, number, content, final, time.Now()).Scan(&logPartId)
 
@@ -41,11 +50,11 @@ func (db *DB) CreateLogPart(logId int, number int, content string, final bool) e
     return nil
 }
 
-func (db *DB) Close() {
+func (db *RealDB) Close() {
     db.conn.Close()
 }
 
-func NewDB(url string) (*DB, error) {
+func NewRealDB(url string) (DB, error) {
     pgUrl, err := pq.ParseURL(url)
     if err != nil {
         return nil, err
@@ -70,5 +79,5 @@ func NewDB(url string) (*DB, error) {
         return nil, err
     }
 
-    return &DB{db, jobIdFind, logPartsCreate}, nil
+    return &RealDB{db, jobIdFind, logPartsCreate}, nil
 }

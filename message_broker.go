@@ -5,12 +5,48 @@ import (
     "log"
 )
 
-type MessageBroker struct {
+type MessageBroker interface {
+    Subscribe(string) (<-chan amqp.Delivery, error)
+    Close()
+}
+
+type RabbitMessageBroker struct {
     conn    *amqp.Connection
     channel *amqp.Channel
 }
 
-func NewMessageBroker(url string) (*MessageBroker, error) {
+// Force the compiler to check that RabbitMessageBroker implements MessageBroker.
+var _ MessageBroker = &RabbitMessageBroker{}
+
+func (mb *RabbitMessageBroker) Subscribe(queueName string) (<-chan amqp.Delivery, error) {
+    ch, err := mb.conn.Channel()
+    if err != nil {
+        return nil, err
+    }
+
+    mb.channel = ch
+
+    err = mb.channel.Qos(20, 0, false)
+    if err != nil {
+        return nil, err
+    }
+
+    messages, err := mb.channel.Consume(queueName, "processor", false, false, false, false, nil)
+    if err != nil {
+        return nil, err
+    }
+
+    return messages, nil
+}
+
+func (mb *RabbitMessageBroker) Close() {
+    if mb.channel != nil {
+        mb.channel.Close()
+    }
+    mb.conn.Close()
+}
+
+func NewMessageBroker(url string) (MessageBroker, error) {
     var err error
 
     if url == "" {
@@ -36,33 +72,5 @@ func NewMessageBroker(url string) (*MessageBroker, error) {
         return nil, err
     }
 
-    return &MessageBroker{conn, nil}, nil
-}
-
-func (mb *MessageBroker) Close() {
-    if mb.channel != nil {
-        mb.channel.Close()
-    }
-    mb.conn.Close()
-}
-
-func (mb *MessageBroker) Subscribe(queueName string) (<-chan amqp.Delivery, error) {
-    ch, err := mb.conn.Channel()
-    if err != nil {
-        return nil, err
-    }
-
-    mb.channel = ch
-
-    err = mb.channel.Qos(20, 0, false)
-    if err != nil {
-        return nil, err
-    }
-
-    messages, err := mb.channel.Consume(queueName, "processor", false, false, false, false, nil)
-    if err != nil {
-        return nil, err
-    }
-
-    return messages, nil
+    return &RabbitMessageBroker{conn, nil}, nil
 }

@@ -6,9 +6,16 @@ import (
     "github.com/timonv/pusher"
 )
 
-type Pusher struct {
+type Pusher interface {
+    Publish(int, int, string, bool) error
+}
+
+type LivePusher struct {
     client *pusher.Client
 }
+
+// Force the compiler to check that LivePusher implements Pusher.
+var _ Pusher = &LivePusher{}
 
 type PusherPayload struct {
     JobId   int    `json:"id"`
@@ -17,25 +24,7 @@ type PusherPayload struct {
     Final   bool   `json:"final"`
 }
 
-func NewPusher(key string, secret string, appId string) (*Pusher, error) {
-    if key == "" {
-        return nil, fmt.Errorf("pusher key was empty")
-    }
-
-    if secret == "" {
-        return nil, fmt.Errorf("pusher secret was empty")
-    }
-
-    if appId == "" {
-        return nil, fmt.Errorf("pusher app id was empty")
-    }
-
-    client := pusher.NewClient(appId, key, secret, false)
-
-    return &Pusher{client}, nil
-}
-
-func (p *Pusher) Publish(jobId int, number int, content string, final bool) error {
+func (p *LivePusher) Publish(jobId int, number int, content string, final bool) error {
     var err error
 
     payload := PusherPayload{
@@ -58,3 +47,22 @@ func (p *Pusher) Publish(jobId int, number int, content string, final bool) erro
 
     return nil
 }
+
+func NewPusher(key string, secret string, appId string) (Pusher, error) {
+    if key == "" {
+        return nil, fmt.Errorf("pusher key was empty")
+    }
+
+    if secret == "" {
+        return nil, fmt.Errorf("pusher secret was empty")
+    }
+
+    if appId == "" {
+        return nil, fmt.Errorf("pusher app id was empty")
+    }
+
+    client := pusher.NewClient(appId, key, secret, false)
+
+    return &LivePusher{client}, nil
+}
+

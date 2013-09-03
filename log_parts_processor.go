@@ -16,8 +16,8 @@ type Payload struct {
 }
 
 type LogPartsProcessor struct {
-    db           *DB
-    pusherClient *Pusher
+    db           DB
+    pusherClient Pusher
     metrics      *Metrics
 }
 

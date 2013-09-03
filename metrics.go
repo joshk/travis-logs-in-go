@@ -8,7 +8,15 @@ import (
 
 var appMetrics = NewMetrics()
 
-type Metrics struct {
+type Metrics interface {
+    TimePusher(f func())
+    MarkFailedPusherCount()
+    TimeLogPartProcessing(f func())
+    MarkFailedLogPartCount()
+    StartMetricsLogging(logger *log.Logger)
+    EachMetric(func(string, interface{}))
+}
+type LiveMetrics struct {
     Registry           *metrics.StandardRegistry
     ProcessTimer       *metrics.StandardTimer
     ProcessFailedCount *metrics.StandardMeter
@@ -16,23 +24,9 @@ type Metrics struct {
     PusherFailedCount  *metrics.StandardMeter
 }
 
-func (m *Metrics) TimePusher(f func()) {
-    m.PusherTimer.Time(f)
-}
+var _ Metrics = &LiveMetrics{}
 
-func (m *Metrics) MarkFailedPusherCount() {
-    m.PusherFailedCount.Mark(1)
-}
-
-func (m *Metrics) TimeLogPartProcessing(f func()) {
-    m.ProcessTimer.Time(f)
-}
-
-func (m *Metrics) MarkFailedLogPartCount() {
-    m.ProcessFailedCount.Mark(1)
-}
-
-func NewMetrics() *Metrics {
+func NewMetrics() Metrics {
     registry := metrics.NewRegistry()
 
     processTimer := metrics.NewTimer()
@@ -47,20 +41,40 @@ func NewMetrics() *Metrics {
     pusherFailedCount := metrics.NewMeter()
     registry.Register("logs.process_log_part.pusher.failed", pusherFailedCount)
 
-    return &Metrics{registry, processTimer, processFailedCount, pusherTimer, pusherFailedCount}
+    return &LiveMetrics{registry, processTimer, processFailedCount, pusherTimer, pusherFailedCount}
 }
 
-func startMetricsLogging(metrics *Metrics, logger *log.Logger) {
+func (m *LiveMetrics) TimePusher(f func()) {
+    m.PusherTimer.Time(f)
+}
+
+func (m *LiveMetrics) MarkFailedPusherCount() {
+    m.PusherFailedCount.Mark(1)
+}
+
+func (m *LiveMetrics) TimeLogPartProcessing(f func()) {
+    m.ProcessTimer.Time(f)
+}
+
+func (m *LiveMetrics) MarkFailedLogPartCount() {
+    m.ProcessFailedCount.Mark(1)
+}
+
+func (m *LiveMetrics) StartLogging(logger *log.Logger) {
     go func() {
         for _ = range time.Tick(time.Duration(60)*time.Second) {
-            logMetrics(metrics, logger)
+            logMetrics(m, logger)
         }
     }()
 }
 
-func logMetrics(m *Metrics, l *log.Logger) {
+func (m *LiveMetrics) EachMetric(f func(string, interface{})) {
+    m.Registry.Each(f)
+}
+
+func logMetrics(m Metrics, l *log.Logger) {
     now := time.Now().Unix()
-    m.Registry.Each(func(name string, i interface{}) {
+    m.EachMetric(func(name string, i interface{}) {
         switch m := i.(type) {
         case metrics.Counter:
             l.Printf("metriks: time=%d name=%s type=count count=%d\n", now, name, m.Count())

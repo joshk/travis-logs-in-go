@@ -17,7 +17,7 @@ func startLogPartsProcessing() {
         logger.Fatalf("startLogPartsProcessing: error setting up Pusher - %v\n", err)
     }
 
-    startMetricsLogging(appMetrics, logger)
+    appMetrics.StartLogging(logger)
 
     logger.Println("Connecting to AMQP")
 

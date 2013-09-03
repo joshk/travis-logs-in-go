@@ -50,9 +50,8 @@ func NewMetrics() *Metrics {
 
 func startMetricsLogging(metrics *Metrics, logger *log.Logger) {
     go func() {
-        for {
+        for _ = range time.Tick(time.Duration(60)*time.Second) {
             logMetrics(metrics, logger)
-            time.Sleep(time.Duration(int64(1e9) * int64(60)))
         }
     }()
 }

@@ -2,7 +2,11 @@ package main
 
 import (
     "flag"
+    "os"
+    "log"
 )
+
+var logger = log.New(os.Stderr, "", 0)
 
 var process = flag.String("process", "streaming", "The process to start")
 

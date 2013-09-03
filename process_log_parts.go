@@ -1,10 +1,8 @@
 package main
 
 import (
-    "github.com/streadway/amqp"
     "log"
     "os"
-    "sync"
 )
 
 var logger = log.New(os.Stderr, "", 0)
@@ -13,9 +11,6 @@ func startLogPartsProcessing() {
     var err error
 
     logger.Println("Starting Log Stream Processing")
-
-    amqp, logParts := subscribeToLoggingQueue()
-    defer amqp.Close()
 
     if err = testDatabaseConnection(); err != nil {
         logger.Fatalf("startLogPartsProcessing: fatal error connection to the database - %v\n", err)
@@ -28,50 +23,19 @@ func startLogPartsProcessing() {
     metrics := NewMetrics()
     startMetricsLogging(metrics, logger)
 
-    var wg sync.WaitGroup
-    wg.Add(20)
-    for i := 0; i < 20; i++ {
-        go func(logProcessorNum int) {
-            defer wg.Done()
+    logger.Println("Connecting to AMQP")
 
-            logger.Printf("Starting Log Processor %d", logProcessorNum+1)
-
-            db, err := NewRealDB(os.Getenv("DATABASE_URL"))
-            if err != nil {
-                logger.Printf("startLogPartsProcessing: [%d] fatal error connecting to the database - %v\n", logProcessorNum+1, err)
-                return
-            }
-
-            pc, err := newPusherClient()
-            if err != nil {
-                logger.Printf("startLogPartsProcessing: [%d] fatal error setting up pusher - %v\n", logProcessorNum+1, err)
-                return
-            }
-
-            lpp := LogPartsProcessor{db, pc, metrics}
-
-            processLogParts(&lpp, logParts)
-
-            logger.Printf("Log Processor %d exited", logProcessorNum+1)
-        }(i)
+    amqp, err := NewMessageBroker(os.Getenv("RABBITMQ_URL"))
+    if err != nil {
+        logger.Fatalf("startLogPartsProcessing: error connecting to Rabbit - %v\n", err)
     }
-    wg.Wait()
-}
+    defer amqp.Close()
 
-func processLogParts(lpp *LogPartsProcessor, logParts <-chan amqp.Delivery) {
-    for part := range logParts {
-        var err error
+    logger.Printf("Subscribing to reporting.jobs.logs")
 
-        lpp.metrics.TimeLogPartProcessing(func() {
-            err = lpp.Process(part.Body)
-        })
-
-        if err != nil {
-            logger.Printf("ERROR %v\n", err)
-            lpp.metrics.MarkFailedLogPartCount()
-        }
-
-        part.Ack(false)
+    err = amqp.Subscribe("reporting.jobs.logs", 20, createLogPartsProcessor, metrics)
+    if err != nil {
+        logger.Fatalf("startLogPartsProcessing: error setting up subscriptions - %v\n", err)
     }
 }
 
@@ -94,21 +58,33 @@ func newPusherClient() (Pusher, error) {
     return p, nil
 }
 
-func subscribeToLoggingQueue() (MessageBroker, <-chan amqp.Delivery) {
-    logger.Println("Connecting to AMQP")
+func createLogPartsProcessor(logProcessorNum int, metrics *Metrics) func([]byte) {
+    logger.Printf("Starting Log Processor %d", logProcessorNum+1)
 
-    amqp, err := NewMessageBroker(os.Getenv("RABBITMQ_URL"))
+    db, err := NewRealDB(os.Getenv("DATABASE_URL"))
     if err != nil {
-        logger.Fatalf("startLogPartsProcessing: fatal error connecting to %s - %v\n", os.Getenv("RABBITMQ_URL"), err)
+        logger.Printf("createLogPartsProcessor: [%d] fatal error connecting to the database - %v\n", logProcessorNum+1, err)
+        return nil
     }
 
-    logger.Printf("Subscribing to reporting.jobs.logs")
-
-    logParts, err := amqp.Subscribe("reporting.jobs.logs")
+    pc, err := newPusherClient()
     if err != nil {
-        amqp.Close()
-        logger.Fatalf("startLogPartsProcessing: fatal error subscribing to reporting.jobs.logs - %v\n", err)
+        logger.Printf("createLogPartsProcessor: [%d] fatal error setting up pusher - %v\n", logProcessorNum+1, err)
+        return nil
     }
 
-    return amqp, logParts
+    lpp := LogPartsProcessor{db, pc, metrics}
+
+    return func(message []byte) {
+        var err error
+
+        lpp.metrics.TimeLogPartProcessing(func() {
+            err = lpp.Process(message)
+        })
+
+        if err != nil {
+            logger.Printf("ERROR %v\n", err)
+            lpp.metrics.MarkFailedLogPartCount()
+        }
+    }
 }

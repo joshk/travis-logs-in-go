@@ -3,10 +3,11 @@ package main
 import (
     "github.com/streadway/amqp"
     "log"
+    "sync"
 )
 
 type MessageBroker interface {
-    Subscribe(string) (<-chan amqp.Delivery, error)
+    Subscribe(string, int, func(int, *Metrics) func([]byte), *Metrics) error
     Close()
 }
 
@@ -18,25 +19,41 @@ type RabbitMessageBroker struct {
 // Force the compiler to check that RabbitMessageBroker implements MessageBroker.
 var _ MessageBroker = &RabbitMessageBroker{}
 
-func (mb *RabbitMessageBroker) Subscribe(queueName string) (<-chan amqp.Delivery, error) {
+func (mb *RabbitMessageBroker) Subscribe(queueName string, subCount int, f func(int, *Metrics) func([]byte), metrics *Metrics) error {
     ch, err := mb.conn.Channel()
     if err != nil {
-        return nil, err
+        return err
+    }
+
+    err = ch.Qos(subCount, 0, false)
+    if err != nil {
+        return err
+    }
+
+    messages, err := ch.Consume(queueName, "processor", false, false, false, false, nil)
+    if err != nil {
+        return err
     }
 
     mb.channel = ch
 
-    err = mb.channel.Qos(20, 0, false)
-    if err != nil {
-        return nil, err
-    }
+    var wg sync.WaitGroup
+    wg.Add(subCount)
+    for i := 0; i < subCount; i++ {
+        go func(logProcessorNum int) {
+            defer wg.Done()
 
-    messages, err := mb.channel.Consume(queueName, "processor", false, false, false, false, nil)
-    if err != nil {
-        return nil, err
-    }
+            subscription := f(logProcessorNum, metrics)
 
-    return messages, nil
+            for message := range messages {
+                subscription(message.Body)
+                message.Ack(false)
+            }
+        }(i)
+    }
+    wg.Wait()
+
+    return nil
 }
 
 func (mb *RabbitMessageBroker) Close() {

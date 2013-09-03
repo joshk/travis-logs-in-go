@@ -46,8 +46,8 @@ func (lpp *LogPartsProcessor) Process(message []byte) error {
 }
 
 func (lpp *LogPartsProcessor) parseMessageBody(message []byte) (*Payload, error) {
-    var payload *Payload
-    err := json.Unmarshal(message, &payload)
+    payload := &Payload{}
+    err := json.Unmarshal(message, payload)
 
     if err != nil {
         return nil, fmt.Errorf("parseMessageBody: error during json.unmarshal: %v", err)

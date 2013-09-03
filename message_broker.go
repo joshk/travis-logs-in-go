@@ -54,7 +54,7 @@ func (mb *MessageBroker) Subscribe(queueName string) (<-chan amqp.Delivery, erro
 
     mb.channel = ch
 
-    err = mb.channel.Qos(10, 0, false)
+    err = mb.channel.Qos(20, 0, false)
     if err != nil {
         return nil, err
     }

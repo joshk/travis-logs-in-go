@@ -13,7 +13,7 @@ type Metrics interface {
     MarkFailedPusherCount()
     TimeLogPartProcessing(f func())
     MarkFailedLogPartCount()
-    StartMetricsLogging(logger *log.Logger)
+    StartLogging(logger *log.Logger)
     EachMetric(func(string, interface{}))
 }
 type LiveMetrics struct {

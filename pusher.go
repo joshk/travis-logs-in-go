@@ -34,7 +34,7 @@ func (p *LivePusher) Publish(jobId int, number int, content string, final bool) 
         Final:   final,
     }
 
-    jsonPayload, err := json.Marshal(payload)
+    jsonPayload, err := json.Marshal(&payload)
     if err != nil {
         return fmt.Errorf("Publish: error during json.marshal: %v", err)
     }

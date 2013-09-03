@@ -6,6 +6,8 @@ import (
     "time"
 )
 
+var appMetrics = NewMetrics()
+
 type Metrics struct {
     Registry           *metrics.StandardRegistry
     ProcessTimer       *metrics.StandardTimer

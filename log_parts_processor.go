@@ -18,7 +18,6 @@ type Payload struct {
 type LogPartsProcessor struct {
     db           DB
     pusherClient Pusher
-    metrics      *Metrics
 }
 
 func (lpp *LogPartsProcessor) Process(message []byte) error {
@@ -86,12 +85,12 @@ func (lpp *LogPartsProcessor) createLogPart(logId int, payload *Payload) error {
 func (lpp *LogPartsProcessor) streamToPusher(payload *Payload) error {
     var err error
 
-    lpp.metrics.TimePusher(func() {
+    appMetrics.TimePusher(func() {
         err = lpp.pusherClient.Publish(payload.JobId, payload.Number, payload.Content, payload.Final)
     })
 
     if err != nil {
-        lpp.metrics.MarkFailedPusherCount()
+        appMetrics.MarkFailedPusherCount()
         return err
     }
 

@@ -17,8 +17,7 @@ func startLogPartsProcessing() {
         logger.Fatalf("startLogPartsProcessing: error setting up Pusher - %v\n", err)
     }
 
-    metrics := NewMetrics()
-    startMetricsLogging(metrics, logger)
+    startMetricsLogging(appMetrics, logger)
 
     logger.Println("Connecting to AMQP")
 
@@ -30,7 +29,7 @@ func startLogPartsProcessing() {
 
     logger.Printf("Subscribing to reporting.jobs.logs")
 
-    err = amqp.Subscribe("reporting.jobs.logs", 20, createLogPartsProcessor, metrics)
+    err = amqp.Subscribe("reporting.jobs.logs", 20, createLogPartsProcessor)
     if err != nil {
         logger.Fatalf("startLogPartsProcessing: error setting up subscriptions - %v\n", err)
     }
@@ -55,7 +54,7 @@ func newPusherClient() (Pusher, error) {
     return p, nil
 }
 
-func createLogPartsProcessor(logProcessorNum int, metrics *Metrics) func([]byte) {
+func createLogPartsProcessor(logProcessorNum int) func([]byte) {
     logger.Printf("Starting Log Processor %d", logProcessorNum+1)
 
     db, err := NewRealDB(os.Getenv("DATABASE_URL"))
@@ -70,18 +69,18 @@ func createLogPartsProcessor(logProcessorNum int, metrics *Metrics) func([]byte)
         return nil
     }
 
-    lpp := LogPartsProcessor{db, pc, metrics}
+    lpp := LogPartsProcessor{db, pc}
 
     return func(message []byte) {
         var err error
 
-        lpp.metrics.TimeLogPartProcessing(func() {
+        appMetrics.TimeLogPartProcessing(func() {
             err = lpp.Process(message)
         })
 
         if err != nil {
             logger.Printf("ERROR %v\n", err)
-            lpp.metrics.MarkFailedLogPartCount()
+            appMetrics.MarkFailedLogPartCount()
         }
     }
 }

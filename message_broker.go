@@ -7,7 +7,7 @@ import (
 )
 
 type MessageBroker interface {
-    Subscribe(string, int, func(int, *Metrics) func([]byte), *Metrics) error
+    Subscribe(string, int, func(int) func([]byte)) error
     Close()
 }
 
@@ -19,7 +19,7 @@ type RabbitMessageBroker struct {
 // Force the compiler to check that RabbitMessageBroker implements MessageBroker.
 var _ MessageBroker = &RabbitMessageBroker{}
 
-func (mb *RabbitMessageBroker) Subscribe(queueName string, subCount int, f func(int, *Metrics) func([]byte), metrics *Metrics) error {
+func (mb *RabbitMessageBroker) Subscribe(queueName string, subCount int, f func(int) func([]byte)) error {
     ch, err := mb.conn.Channel()
     if err != nil {
         return err
@@ -43,7 +43,7 @@ func (mb *RabbitMessageBroker) Subscribe(queueName string, subCount int, f func(
         go func(logProcessorNum int) {
             defer wg.Done()
 
-            subscription := f(logProcessorNum, metrics)
+            subscription := f(logProcessorNum)
 
             for message := range messages {
                 subscription(message.Body)

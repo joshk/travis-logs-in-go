@@ -29,7 +29,7 @@ func startLogPartsProcessing() {
 
     logger.Printf("Subscribing to reporting.jobs.logs")
 
-    err = amqp.Subscribe("reporting.jobs.logs", 20, createLogPartsProcessor)
+    err = amqp.Subscribe("reporting.jobs.logs", 30, createLogPartsProcessor)
     if err != nil {
         logger.Fatalf("startLogPartsProcessing: error setting up subscriptions - %v\n", err)
     }

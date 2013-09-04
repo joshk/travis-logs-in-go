@@ -25,7 +25,7 @@ func (mb *RabbitMessageBroker) Subscribe(queueName string, subCount int, f func(
         return err
     }
 
-    err = ch.Qos(subCount, 0, false)
+    err = ch.Qos(subCount * 3, 0, false)
     if err != nil {
         return err
     }

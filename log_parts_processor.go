@@ -52,7 +52,7 @@ func (lpp *LogPartsProcessor) parseMessageBody(message []byte) (*Payload, error)
         return nil, fmt.Errorf("parseMessageBody: error during json.unmarshal: %v", err)
     }
 
-    //payload.Content = strings.Replace(payload.Content, "\x00", "", -1)
+    payload.Content = strings.Replace(payload.Content, "\x00", "", -1)
     //fmt.Printf("job_id:%d number:%d\n", payload.JobId, payload.Number)
     //fmt.Printf("%#v\n", payload.Content)
 

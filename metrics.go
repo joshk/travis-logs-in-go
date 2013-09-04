@@ -62,7 +62,7 @@ func (m *LiveMetrics) MarkFailedLogPartCount() {
 
 func (m *LiveMetrics) StartLogging(logger *log.Logger) {
     go func() {
-        for _ = range time.Tick(time.Duration(60)*time.Second) {
+        for _ = range time.Tick(time.Duration(60) * time.Second) {
             logMetrics(m, logger)
         }
     }()

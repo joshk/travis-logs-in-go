@@ -65,4 +65,3 @@ func NewPusher(key string, secret string, appId string) (Pusher, error) {
 
     return &LivePusher{client}, nil
 }
-

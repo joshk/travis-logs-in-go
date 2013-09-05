@@ -11,11 +11,11 @@ func startLogPartsProcessing() {
     logger.Println("Starting Log Stream Processing")
 
     if err = testDatabaseConnection(); err != nil {
-        logger.Fatalf("startLogPartsProcessing: fatal error connection to the database - %v\n", err)
+        logger.Fatalf("startLogPartsProcessing: fatal error connection to the database - %v", err)
     }
 
     if _, err = newPusherClient(); err != nil {
-        logger.Fatalf("startLogPartsProcessing: error setting up Pusher - %v\n", err)
+        logger.Fatalf("startLogPartsProcessing: error setting up Pusher - %v", err)
     }
 
     appMetrics.StartLogging(logger)
@@ -24,7 +24,7 @@ func startLogPartsProcessing() {
 
     amqp, err := NewMessageBroker(os.Getenv("RABBITMQ_URL"))
     if err != nil {
-        logger.Fatalf("startLogPartsProcessing: error connecting to Rabbit - %v\n", err)
+        logger.Fatalf("startLogPartsProcessing: error connecting to Rabbit - %v", err)
     }
     defer amqp.Close()
 
@@ -38,7 +38,7 @@ func startLogPartsProcessing() {
 
             err = amqp.Subscribe("reporting.jobs.logs", 10, createLogPartsProcessor)
             if err != nil {
-                logger.Fatalf("startLogPartsProcessing: error setting up subscriptions - %v\n", err)
+                logger.Fatalf("startLogPartsProcessing: error setting up subscriptions - %v", err)
             }
 
         }()
@@ -70,13 +70,13 @@ func createLogPartsProcessor(logProcessorNum int) MessageProcessor {
 
     db, err := NewRealDB(os.Getenv("DATABASE_URL"))
     if err != nil {
-        logger.Printf("createLogPartsProcessor: [%d] fatal error connecting to the database - %v\n", logProcessorNum+1, err)
+        logger.Printf("createLogPartsProcessor: [%d] fatal error connecting to the database - %v", logProcessorNum+1, err)
         return nil
     }
 
     pc, err := newPusherClient()
     if err != nil {
-        logger.Printf("createLogPartsProcessor: [%d] fatal error setting up pusher - %v\n", logProcessorNum+1, err)
+        logger.Printf("createLogPartsProcessor: [%d] fatal error setting up pusher - %v", logProcessorNum+1, err)
         return nil
     }
 

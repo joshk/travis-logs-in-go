@@ -20,9 +20,6 @@ type RabbitMessageBroker struct {
     channel *amqp.Channel
 }
 
-// Force the compiler to check that RabbitMessageBroker implements MessageBroker.
-var _ MessageBroker = &RabbitMessageBroker{}
-
 func (mb *RabbitMessageBroker) Subscribe(queueName string, subCount int, f func(int) MessageProcessor) error {
     ch, err := mb.conn.Channel()
     if err != nil {

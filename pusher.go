@@ -14,9 +14,6 @@ type LivePusher struct {
     client *pusher.Client
 }
 
-// Force the compiler to check that LivePusher implements Pusher.
-var _ Pusher = &LivePusher{}
-
 type PusherPayload struct {
     JobId   int    `json:"id"`
     Number  int    `json:"number"`
@@ -25,8 +22,6 @@ type PusherPayload struct {
 }
 
 func (p *LivePusher) Publish(jobId int, number int, content string, final bool) error {
-    var err error
-
     payload := PusherPayload{
         JobId:   jobId,
         Number:  number,

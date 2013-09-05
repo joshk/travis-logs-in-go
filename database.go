@@ -19,9 +19,6 @@ type RealDB struct {
     logPartCreate *sql.Stmt
 }
 
-// Force the compiler to check that RealDB implements DB.
-var _ DB = &RealDB{}
-
 func (db *RealDB) FindLogId(jobId int) (int, error) {
     var logId int
     err := db.jobIdFind.QueryRow(jobId).Scan(&logId)

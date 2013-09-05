@@ -23,21 +23,28 @@ type LogPartsProcessor struct {
 func (lpp *LogPartsProcessor) Process(message []byte) error {
     var err error
 
-    payload, err := lpp.parseMessageBody(message)
+    appMetrics.TimeLogPartProcessing(func() {
+        payload, err := lpp.parseMessageBody(message)
+        if err != nil {
+            return
+        }
+
+        logId, err := lpp.findLogId(payload)
+        if err != nil {
+            return
+        }
+
+        if err = lpp.createLogPart(logId, payload); err != nil {
+            return
+        }
+
+        if err = lpp.streamToPusher(payload); err != nil {
+            return
+        }
+    })
+
     if err != nil {
-        return err
-    }
-
-    logId, err := lpp.findLogId(payload)
-    if err != nil {
-        return err
-    }
-
-    if err = lpp.createLogPart(logId, payload); err != nil {
-        return err
-    }
-
-    if err = lpp.streamToPusher(payload); err != nil {
+        appMetrics.MarkFailedLogPartCount()
         return err
     }
 

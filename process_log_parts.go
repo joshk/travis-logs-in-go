@@ -65,7 +65,7 @@ func newPusherClient() (Pusher, error) {
     return p, nil
 }
 
-func createLogPartsProcessor(logProcessorNum int) func([]byte) {
+func createLogPartsProcessor(logProcessorNum int) MessageProcessor {
     logger.Printf("Starting Log Processor %d", logProcessorNum+1)
 
     db, err := NewRealDB(os.Getenv("DATABASE_URL"))
@@ -80,18 +80,5 @@ func createLogPartsProcessor(logProcessorNum int) func([]byte) {
         return nil
     }
 
-    lpp := LogPartsProcessor{db, pc}
-
-    return func(message []byte) {
-        var err error
-
-        appMetrics.TimeLogPartProcessing(func() {
-            err = lpp.Process(message)
-        })
-
-        if err != nil {
-            logger.Printf("ERROR %v\n", err)
-            appMetrics.MarkFailedLogPartCount()
-        }
-    }
+    return &LogPartsProcessor{db, pc}
 }

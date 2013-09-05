@@ -2,6 +2,7 @@ package main
 
 import (
     "os"
+    "sync"
 )
 
 func startLogPartsProcessing() {
@@ -29,10 +30,20 @@ func startLogPartsProcessing() {
 
     logger.Printf("Subscribing to reporting.jobs.logs")
 
-    err = amqp.Subscribe("reporting.jobs.logs", 30, createLogPartsProcessor)
-    if err != nil {
-        logger.Fatalf("startLogPartsProcessing: error setting up subscriptions - %v\n", err)
+    var wg sync.WaitGroup
+    wg.Add(3)
+    for i := 0; i < 3; i++ {
+        go func() {
+            defer wg.Done()
+
+            err = amqp.Subscribe("reporting.jobs.logs", 10, createLogPartsProcessor)
+            if err != nil {
+                logger.Fatalf("startLogPartsProcessing: error setting up subscriptions - %v\n", err)
+            }
+
+        }()
     }
+    wg.Wait()
 }
 
 func testDatabaseConnection() error {

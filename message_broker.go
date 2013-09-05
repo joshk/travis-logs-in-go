@@ -16,8 +16,7 @@ type MessageProcessor interface {
 }
 
 type RabbitMessageBroker struct {
-    conn    *amqp.Connection
-    channel *amqp.Channel
+    conn *amqp.Connection
 }
 
 func (mb *RabbitMessageBroker) Subscribe(queueName string, subCount int, f func(int) MessageProcessor) error {
@@ -25,6 +24,7 @@ func (mb *RabbitMessageBroker) Subscribe(queueName string, subCount int, f func(
     if err != nil {
         return err
     }
+    defer ch.Close()
 
     err = ch.Qos(subCount*3, 0, false)
     if err != nil {
@@ -35,8 +35,6 @@ func (mb *RabbitMessageBroker) Subscribe(queueName string, subCount int, f func(
     if err != nil {
         return err
     }
-
-    mb.channel = ch
 
     var wg sync.WaitGroup
     wg.Add(subCount)
@@ -58,9 +56,6 @@ func (mb *RabbitMessageBroker) Subscribe(queueName string, subCount int, f func(
 }
 
 func (mb *RabbitMessageBroker) Close() {
-    if mb.channel != nil {
-        mb.channel.Close()
-    }
     mb.conn.Close()
 }
 
@@ -90,5 +85,5 @@ func NewMessageBroker(url string) (MessageBroker, error) {
         return nil, err
     }
 
-    return &RabbitMessageBroker{conn, nil}, nil
+    return &RabbitMessageBroker{conn}, nil
 }

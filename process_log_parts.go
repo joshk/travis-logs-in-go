@@ -3,32 +3,33 @@ package main
 import (
     "os"
     "sync"
+	"log"
 )
 
 func startLogPartsProcessing() {
     var err error
 
-    logger.Println("Starting Log Stream Processing")
+    log.Println("Starting Log Stream Processing")
 
     if err = testDatabaseConnection(); err != nil {
-        logger.Fatalf("startLogPartsProcessing: fatal error connection to the database - %v", err)
+        log.Fatalf("startLogPartsProcessing: fatal error connection to the database - %v", err)
     }
 
     if _, err = newPusherClient(); err != nil {
-        logger.Fatalf("startLogPartsProcessing: error setting up Pusher - %v", err)
+        log.Fatalf("startLogPartsProcessing: error setting up Pusher - %v", err)
     }
 
-    appMetrics.StartLogging(logger)
+    appMetrics.StartLogging()
 
-    logger.Println("Connecting to AMQP")
+    log.Println("Connecting to AMQP")
 
     amqp, err := NewMessageBroker(os.Getenv("RABBITMQ_URL"))
     if err != nil {
-        logger.Fatalf("startLogPartsProcessing: error connecting to Rabbit - %v", err)
+        log.Fatalf("startLogPartsProcessing: error connecting to Rabbit - %v", err)
     }
     defer amqp.Close()
 
-    logger.Printf("Subscribing to reporting.jobs.logs")
+    log.Printf("Subscribing to reporting.jobs.logs")
 
     var wg sync.WaitGroup
     wg.Add(3)
@@ -38,7 +39,7 @@ func startLogPartsProcessing() {
 
             err = amqp.Subscribe("reporting.jobs.logs", 10, createLogPartsProcessor)
             if err != nil {
-                logger.Fatalf("startLogPartsProcessing: error setting up subscriptions - %v", err)
+                log.Fatalf("startLogPartsProcessing: error setting up subscriptions - %v", err)
             }
 
         }()
@@ -47,7 +48,7 @@ func startLogPartsProcessing() {
 }
 
 func testDatabaseConnection() error {
-    logger.Println("Checking the database connection details")
+    log.Println("Checking the database connection details")
     db, err := NewRealDB(os.Getenv("DATABASE_URL"))
     if err != nil {
         return err
@@ -66,17 +67,17 @@ func newPusherClient() (Pusher, error) {
 }
 
 func createLogPartsProcessor(logProcessorNum int) MessageProcessor {
-    logger.Printf("Starting Log Processor %d", logProcessorNum+1)
+    log.Printf("Starting Log Processor %d", logProcessorNum+1)
 
     db, err := NewRealDB(os.Getenv("DATABASE_URL"))
     if err != nil {
-        logger.Printf("createLogPartsProcessor: [%d] fatal error connecting to the database - %v", logProcessorNum+1, err)
+        log.Printf("createLogPartsProcessor: [%d] fatal error connecting to the database - %v", logProcessorNum+1, err)
         return nil
     }
 
     pc, err := newPusherClient()
     if err != nil {
-        logger.Printf("createLogPartsProcessor: [%d] fatal error setting up pusher - %v", logProcessorNum+1, err)
+        log.Printf("createLogPartsProcessor: [%d] fatal error setting up pusher - %v", logProcessorNum+1, err)
         return nil
     }
 

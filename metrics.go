@@ -13,7 +13,7 @@ type Metrics interface {
     MarkFailedPusherCount()
     TimeLogPartProcessing(f func())
     MarkFailedLogPartCount()
-    StartLogging(logger *log.Logger)
+    StartLogging()
     EachMetric(func(string, interface{}))
 }
 type LiveMetrics struct {
@@ -60,10 +60,10 @@ func (m *LiveMetrics) MarkFailedLogPartCount() {
     m.ProcessFailedCount.Mark(1)
 }
 
-func (m *LiveMetrics) StartLogging(logger *log.Logger) {
+func (m *LiveMetrics) StartLogging() {
     go func() {
         for _ = range time.Tick(time.Duration(60) * time.Second) {
-            logMetrics(m, logger)
+            logMetrics(m)
         }
     }()
 }
@@ -72,25 +72,25 @@ func (m *LiveMetrics) EachMetric(f func(string, interface{})) {
     m.Registry.Each(f)
 }
 
-func logMetrics(m Metrics, l *log.Logger) {
+func logMetrics(m Metrics) {
     now := time.Now().Unix()
     m.EachMetric(func(name string, i interface{}) {
         switch m := i.(type) {
         case metrics.Counter:
-            l.Printf("metriks: time=%d name=%s type=count count=%d\n", now, name, m.Count())
+            log.Printf("metriks: time=%d name=%s type=count count=%d\n", now, name, m.Count())
         case metrics.Gauge:
-            l.Printf("metriks: time=%d name=%s type=gauge value=%d\n", now, name, m.Value())
+            log.Printf("metriks: time=%d name=%s type=gauge value=%d\n", now, name, m.Value())
         case metrics.Healthcheck:
             m.Check()
-            l.Printf("metriks: time=%d name=%s type=healthcheck error=%v\n", now, name, m.Error())
+            log.Printf("metriks: time=%d name=%s type=healthcheck error=%v\n", now, name, m.Error())
         case metrics.Histogram:
             ps := m.Percentiles([]float64{0.5, 0.75, 0.95, 0.99, 0.999})
-            l.Printf("metriks: time=%d name=%s type=histogram count=%d min=%d max=%d mean=%f stddev=%f median=%f 95th_percentile=%f 99th_percentile=%f\n", now, name, m.Count(), int64NanoToSeconds(m.Min()), int64NanoToSeconds(m.Max()), float64NanoToSeconds(m.Mean()), float64NanoToSeconds(m.StdDev()), float64NanoToSeconds(ps[0]), float64NanoToSeconds(ps[2]), float64NanoToSeconds(ps[3]))
+            log.Printf("metriks: time=%d name=%s type=histogram count=%d min=%d max=%d mean=%f stddev=%f median=%f 95th_percentile=%f 99th_percentile=%f\n", now, name, m.Count(), int64NanoToSeconds(m.Min()), int64NanoToSeconds(m.Max()), float64NanoToSeconds(m.Mean()), float64NanoToSeconds(m.StdDev()), float64NanoToSeconds(ps[0]), float64NanoToSeconds(ps[2]), float64NanoToSeconds(ps[3]))
         case metrics.Meter:
-            l.Printf("metriks: time=%d name=%s type=meter count=%d one_minute_rate=%f five_minute_rate=%f fifteen_minute_rate=%f mean_rate=%f\n", now, name, m.Count(), m.Rate1(), m.Rate5(), m.Rate15(), m.RateMean())
+            log.Printf("metriks: time=%d name=%s type=meter count=%d one_minute_rate=%f five_minute_rate=%f fifteen_minute_rate=%f mean_rate=%f\n", now, name, m.Count(), m.Rate1(), m.Rate5(), m.Rate15(), m.RateMean())
         case metrics.Timer:
             ps := m.Percentiles([]float64{0.5, 0.75, 0.95, 0.99, 0.999})
-            l.Printf("metriks: time=%d name=%s type=timer count=%d one_minute_rate=%f five_minute_rate=%f fifteen_minute_rate=%f mean_rate=%f min=%f max=%f mean=%f stddev=%f median=%f 95th_percentile=%f 99th_percentile=%f\n", now, name, m.Count(), m.Rate1(), m.Rate5(), m.Rate15(), m.RateMean(), int64NanoToSeconds(m.Min()), int64NanoToSeconds(m.Max()), float64NanoToSeconds(m.Mean()), float64NanoToSeconds(m.StdDev()), float64NanoToSeconds(ps[0]), float64NanoToSeconds(ps[2]), float64NanoToSeconds(ps[3]))
+            log.Printf("metriks: time=%d name=%s type=timer count=%d one_minute_rate=%f five_minute_rate=%f fifteen_minute_rate=%f mean_rate=%f min=%f max=%f mean=%f stddev=%f median=%f 95th_percentile=%f 99th_percentile=%f\n", now, name, m.Count(), m.Rate1(), m.Rate5(), m.Rate15(), m.RateMean(), int64NanoToSeconds(m.Min()), int64NanoToSeconds(m.Max()), float64NanoToSeconds(m.Mean()), float64NanoToSeconds(m.StdDev()), float64NanoToSeconds(ps[0]), float64NanoToSeconds(ps[2]), float64NanoToSeconds(ps[3]))
         }
     })
 }

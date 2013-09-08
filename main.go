@@ -3,12 +3,13 @@ package main
 import (
     "flag"
     "log"
-    "os"
 )
 
-var logger = log.New(os.Stderr, "", 0)
-
 var process = flag.String("process", "streaming", "The process to start")
+
+func init() {
+    log.SetFlags(0)
+}
 
 func main() {
     flag.Parse()

@@ -33,11 +33,11 @@ func startLogPartsProcessing() {
 
     var wg sync.WaitGroup
     wg.Add(3)
-    for i := 0; i < 3; i++ {
+    for i := 0; i < 5; i++ {
         go func() {
             defer wg.Done()
 
-            err = amqp.Subscribe("reporting.jobs.logs", 10, createLogPartsProcessor)
+            err = amqp.Subscribe("reporting.jobs.logs", 5, createLogPartsProcessor)
             if err != nil {
                 log.Fatalf("startLogPartsProcessing: error setting up subscriptions - %v", err)
             }

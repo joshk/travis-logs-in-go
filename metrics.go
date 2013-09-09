@@ -45,29 +45,27 @@ func NewMetrics() Metrics {
 }
 
 func (m *LiveMetrics) TimePusher(f func()) {
-    // m.PusherTimer.Time(f)
-    f()
+    m.PusherTimer.Time(f)
 }
 
 func (m *LiveMetrics) MarkFailedPusherCount() {
-    // m.PusherFailedCount.Mark(1)
+    m.PusherFailedCount.Mark(1)
 }
 
 func (m *LiveMetrics) TimeLogPartProcessing(f func()) {
-    // m.ProcessTimer.Time(f)
-    f()
+    m.ProcessTimer.Time(f)
 }
 
 func (m *LiveMetrics) MarkFailedLogPartCount() {
-    // m.ProcessFailedCount.Mark(1)
+    m.ProcessFailedCount.Mark(1)
 }
 
 func (m *LiveMetrics) StartLogging() {
-    // go func() {
-    //     for _ = range time.Tick(time.Duration(60) * time.Second) {
-    //         logMetrics(m)
-    //     }
-    // }()
+    go func() {
+        for _ = range time.Tick(time.Duration(60) * time.Second) {
+            logMetrics(m)
+        }
+    }()
 }
 
 func (m *LiveMetrics) EachMetric(f func(string, interface{})) {

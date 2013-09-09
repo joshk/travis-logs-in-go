@@ -33,7 +33,7 @@ func startLogPartsProcessing() {
 
     var wg sync.WaitGroup
     wg.Add(3)
-    for i := 0; i < 5; i++ {
+    for i := 0; i < 7; i++ {
         go func() {
             defer wg.Done()
 

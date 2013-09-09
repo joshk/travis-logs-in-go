@@ -32,8 +32,8 @@ func startLogPartsProcessing() {
     log.Printf("Subscribing to reporting.jobs.logs")
 
     var wg sync.WaitGroup
-    wg.Add(10)
-    for i := 0; i < 10; i++ {
+    wg.Add(15)
+    for i := 0; i < 15; i++ {
         go func() {
             defer wg.Done()
 

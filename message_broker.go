@@ -45,7 +45,11 @@ func (mb *RabbitMessageBroker) Subscribe(queueName string, subCount int, f func(
             processor := f(logProcessorNum)
 
             for message := range messages {
-                processor.Process(message.Body)
+                err := processor.Process(message.Body)
+                if err != nil {
+                    log.Printf("error processing message - %v", err)
+                }
+
                 message.Ack(false)
             }
         }(i)

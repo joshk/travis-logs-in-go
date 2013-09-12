@@ -34,11 +34,13 @@ func (lpp *LogPartsProcessor) Process(message []byte) error {
             return
         }
 
-        if err = lpp.createLogPart(logId, payload); err != nil {
+        err = lpp.createLogPart(logId, payload)
+        if err != nil {
             return
         }
 
-        if err = lpp.streamToPusher(payload); err != nil {
+        err = lpp.streamToPusher(payload)
+        if err != nil {
             return
         }
     })

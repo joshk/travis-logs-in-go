@@ -3,7 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/pkulak/simpletransport/simpletransport"
 	"github.com/timonv/pusher"
+	"net/http"
+	"time"
 )
 
 type Pusher interface {
@@ -41,6 +44,15 @@ func (p *LivePusher) Publish(jobId int, number int, content string, final bool) 
 	}
 
 	return nil
+}
+
+func SetupPusher() {
+	pusher.HttpClient = http.Client{
+		Transport: &simpletransport.SimpleTransport{
+			ReadTimeout:    3 * time.Second,
+			RequestTimeout: 5 * time.Second,
+		},
+	}
 }
 
 func NewPusher(key string, secret string, appId string) (Pusher, error) {

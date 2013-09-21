@@ -59,6 +59,8 @@ func testDatabaseConnection() error {
 }
 
 func newPusherClient() (Pusher, error) {
+	SetupPusher()
+
 	p, err := NewPusher(os.Getenv("PUSHER_KEY"), os.Getenv("PUSHER_SECRET"), os.Getenv("PUSHER_APP_ID"))
 	if err != nil {
 		return nil, err

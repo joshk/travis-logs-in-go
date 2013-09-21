@@ -1,62 +1,62 @@
 package main
 
 import (
-    "encoding/json"
-    "fmt"
-    "github.com/timonv/pusher"
+	"encoding/json"
+	"fmt"
+	"github.com/timonv/pusher"
 )
 
 type Pusher interface {
-    Publish(int, int, string, bool) error
+	Publish(int, int, string, bool) error
 }
 
 type LivePusher struct {
-    client *pusher.Client
+	client *pusher.Client
 }
 
 type PusherPayload struct {
-    JobId   int    `json:"id"`
-    Number  int    `json:"number"`
-    Content string `json:"_log"`
-    Final   bool   `json:"final"`
+	JobId   int    `json:"id"`
+	Number  int    `json:"number"`
+	Content string `json:"_log"`
+	Final   bool   `json:"final"`
 }
 
 func (p *LivePusher) Publish(jobId int, number int, content string, final bool) error {
-    payload := PusherPayload{
-        JobId:   jobId,
-        Number:  number,
-        Content: content,
-        Final:   final,
-    }
+	payload := PusherPayload{
+		JobId:   jobId,
+		Number:  number,
+		Content: content,
+		Final:   final,
+	}
 
-    jsonPayload, err := json.Marshal(&payload)
-    if err != nil {
-        return fmt.Errorf("Publish: error during json.marshal: %v", err)
-    }
+	jsonPayload, err := json.Marshal(&payload)
+	if err != nil {
+		return fmt.Errorf("Publish: error during json.marshal: %v", err)
+	}
 
-    channel := fmt.Sprintf("job-%d", payload.JobId)
+	channel := fmt.Sprintf("job-%d", payload.JobId)
 
-    if err = p.client.Publish(string(jsonPayload), "job:log", channel); err != nil {
-        return fmt.Errorf("Publish: error publishing to pusher: %v", err)
-    }
+	if err = p.client.Publish(string(jsonPayload), "job:log", channel); err != nil {
+		return fmt.Errorf("Publish: error publishing to pusher: %v", err)
+	}
 
-    return nil
+	return nil
 }
 
 func NewPusher(key string, secret string, appId string) (Pusher, error) {
-    if key == "" {
-        return nil, fmt.Errorf("pusher key was empty")
-    }
+	if key == "" {
+		return nil, fmt.Errorf("pusher key was empty")
+	}
 
-    if secret == "" {
-        return nil, fmt.Errorf("pusher secret was empty")
-    }
+	if secret == "" {
+		return nil, fmt.Errorf("pusher secret was empty")
+	}
 
-    if appId == "" {
-        return nil, fmt.Errorf("pusher app id was empty")
-    }
+	if appId == "" {
+		return nil, fmt.Errorf("pusher app id was empty")
+	}
 
-    client := pusher.NewClient(appId, key, secret, false)
+	client := pusher.NewClient(appId, key, secret, false)
 
-    return &LivePusher{client}, nil
+	return &LivePusher{client}, nil
 }

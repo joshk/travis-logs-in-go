@@ -56,7 +56,7 @@ func NewPusher(key string, secret string, appId string) (Pusher, error) {
         return nil, fmt.Errorf("pusher app id was empty")
     }
 
-    client := pusher.NewClient(appId, key, secret, false)
+    client := pusher.NewClient(appId, key, secret)
 
     return &LivePusher{client}, nil
 }

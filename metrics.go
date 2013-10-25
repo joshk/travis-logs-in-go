@@ -17,11 +17,11 @@ type Metrics interface {
     EachMetric(func(string, interface{}))
 }
 type LiveMetrics struct {
-    Registry           *metrics.StandardRegistry
-    ProcessTimer       *metrics.StandardTimer
-    ProcessFailedCount *metrics.StandardMeter
-    PusherTimer        *metrics.StandardTimer
-    PusherFailedCount  *metrics.StandardMeter
+    Registry           metrics.Registry
+    ProcessTimer       metrics.Timer
+    ProcessFailedCount metrics.Meter
+    PusherTimer        metrics.Timer
+    PusherFailedCount  metrics.Meter
 }
 
 var _ Metrics = &LiveMetrics{}

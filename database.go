@@ -3,7 +3,7 @@ package main
 import (
     "database/sql"
     "fmt"
-    "github.com/joshk/pq"
+    "github.com/lib/pq"
     "time"
 )
 

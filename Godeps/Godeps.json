@@ -1,18 +1,18 @@
 {
 	"ImportPath": "github.com/joshk/travis-logs-in-go",
-	"GoVersion": "go1.1.2",
+	"GoVersion": "go1.4",
 	"Deps": [
 		{
 			"ImportPath": "github.com/lib/pq",
-			"Rev": "78760269eebe5e70b28bb94bff676d7b28df275d"
+			"Rev": "dc911180b321e9b7e08aa94f20939ef0109b9b24"
 		},
 		{
 			"ImportPath": "github.com/rcrowley/go-metrics",
-			"Rev": "ef0c40b7a2d641ab732c0f8e3db69e6fea60e075"
+			"Rev": "dee209f2455f101a5e4e593dea94872d2c62d85d"
 		},
 		{
 			"ImportPath": "github.com/streadway/amqp",
-			"Rev": "3d261d2636b7c19314394aadaa6385c1cbad4152"
+			"Rev": "8f954cbac5c3c93e86837c91b36a7ae6652e4cf1"
 		},
 		{
 			"ImportPath": "github.com/timonv/pusher",
